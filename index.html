@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Журнал Смены — Lucky Socks</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: var(--tg-theme-bg-color, #f4f6f8);
+            --text-color: var(--tg-theme-text-color, #222);
+            --card-bg: var(--tg-theme-secondary-bg-color, #ffffff);
+            --button-color: var(--tg-theme-button-color, #2481cc);
+            --button-text: var(--tg-theme-button-text-color, #ffffff);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 12px;
+            box-sizing: border-box;
+        }
+
+        h2 { text-align: center; margin-top: 0; margin-bottom: 12px; font-size: 18px; }
+
+        .header-card, .weight-card {
+            background: var(--card-bg);
+            padding: 12px;
+            border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 12px;
+        }
+
+        .form-row { display: flex; gap: 8px; margin-bottom: 8px; }
+        .form-group { flex: 1; display: flex; flex-direction: column; }
+        label { font-size: 11px; font-weight: bold; color: #666; margin-bottom: 4px; text-align: center; }
+        
+        select, input {
+            padding: 8px 4px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 12px;
+            outline: none;
+            background: #fff;
+            text-align: center;
+        }
+
+        .input-error {
+            border: 2px solid #dc3545 !important;
+            background-color: #f8d7da !important;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            background: var(--card-bg);
+            border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 12px;
+        }
+
+        table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 340px; }
+        th, td { border: 1px solid #e0e0e0; padding: 4px 2px; text-align: center; }
+        th { background: #eaeaea; font-size: 11px; }
+        .machine-num { font-weight: bold; background: #f9f9f9; }
+
+        td select, td input {
+            width: 100%;
+            padding: 4px 1px;
+            font-size: 12px;
+            border: none;
+            background: transparent;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        td select:focus, td input:focus { background: #e8f0fe; }
+
+        .status-badge { font-weight: bold; padding: 2px 4px; border-radius: 4px; }
+        .green { background: #d4edda !important; color: #155724 !important; }
+        .yellow { background: #fff3cd !important; color: #856404 !important; }
+        .red { background: #f8d7da !important; color: #721c24 !important; }
+
+        .summary-row { background: #000; color: #fff; font-weight: bold; font-size: 11px; }
+        .summary-row td { border: 1px solid #333; padding: 6px 2px; }
+
+        .weight-summary { display: flex; gap: 8px; margin-top: 10px; }
+        .weight-badge { flex: 1; padding: 8px; border-radius: 6px; text-align: center; font-weight: bold; font-size: 12px; }
+
+        .btn-submit {
+            width: 100%;
+            background: var(--button-color);
+            color: var(--button-text);
+            border: none;
+            padding: 14px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        th:nth-child(1) { width: 35px; } 
+        th:nth-child(2) { width: 85px; } 
+        th:nth-child(3) { width: 45px; } 
+        th:nth-child(4) { width: 75px; } 
+        th:nth-child(5) { width: 40px; } 
+        th:nth-child(6) { width: 38px; } 
+        th:nth-child(7) { width: 38px; } 
+        th:nth-child(8) { width: 40px; } 
+    </style>
+</head>
+<body>
+
+    <h2>📋 БЛАНК ОТЧЕТА СМЕНЫ</h2>
+
+    <div class="header-card">
+        <div class="form-row">
+            <div class="form-group">
+                <label>📅 ДАТА</label>
+                <input type="text" id="dateInput" readonly style="background: #e9ecef; font-weight: bold;">
+            </div>
+        </div>
+        <div class="form-row" style="margin-bottom: 0;">
+            <div class="form-group">
+                <label>👤 ОПЕРАТОР</label>
+                <select id="operatorSelect">
+                    <option value="">-</option>
+                    <option value="Гулина">Гулина</option>
+                    <option value="Гулнур">Гулнур</option>
+                    <option value="Сайкал">Сайкал</option>
+                    <option value="Айсулуу">Айсулуу</option>
+                    <option value="Расул">Расул</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>🔄 СМЕНА</label>
+                <select id="shiftSelect">
+                    <option value="">-</option>
+                    <option value="День ☀️">День ☀️</option>
+                    <option value="Ночь 🌙">Ночь 🌙</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>🛠️ МАСТЕР</label>
+                <select id="masterSelect">
+                    <option value="">-</option>
+                    <option value="Улан">👨‍🦳 Улан</option>
+                    <option value="Расул">👨‍🔧 Расул</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>№</th>
+                    <th>Артикул</th>
+                    <th>Пол</th>
+                    <th>Цвет</th>
+                    <th>Норм</th>
+                    <th>1с</th>
+                    <th>2с</th>
+                    <th>%</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+            <tfoot>
+                <tr class="summary-row">
+                    <td colspan="4" id="totalMachinesText">0 автоматов в работе</td>
+                    <td id="totalNorm">0</td>
+                    <td id="totalR1">0</td>
+                    <td id="totalR2">0</td>
+                    <td><span id="avgPercent" class="status-badge" style="color:#000;">0%</span></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div class="weight-card">
+        <label style="display:block; margin-bottom:8px; text-align:center;">⚖️ ИТОГОВЫЙ ВЕС</label>
+        <div class="form-row">
+            <div class="form-group">
+                <label>2с (г)</label>
+                <input type="number" id="w2" inputmode="numeric" placeholder="0" oninput="clearError(this); recalcAll()">
+            </div>
+            <div class="form-group">
+                <label>Брак (г)</label>
+                <input type="number" id="waste" inputmode="numeric" placeholder="0" oninput="clearError(this); recalcAll()">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>1с (кг)</label>
+                <input type="number" step="0.1" id="w1" inputmode="decimal" placeholder="0.0" oninput="clearError(this); recalcAll()">
+            </div>
+            <div class="form-group">
+                <label>Мастер (г)</label>
+                <input type="number" id="masterWaste" inputmode="numeric" placeholder="0" oninput="clearError(this); recalcAll()">
+            </div>
+        </div>
+
+        <div class="weight-summary">
+            <div class="weight-badge" id="norm1sBadge">
+                <div style="font-size: 9px; color: #555;">норма 1 сорта</div>
+                <span id="norm1sVal">0% от нормы</span>
+            </div>
+            <div class="weight-badge" id="wasteBadge">
+                <div style="font-size: 9px; color: #555;">норма брака</div>
+                <span id="wasteVal">0.00% брак</span>
+            </div>
+        </div>
+    </div>
+
+    <button class="btn-submit" onclick="submitData()">🚀 Сдать смену в Google Sheets</button>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        function setNowDate() {
+            const now = new Date();
+            const dd = String(now.getDate()).padStart(2, '0');
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const yy = String(now.getFullYear()).slice(-2);
+            const hh = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('dateInput').value = `${dd}.${mm}.${yy} ${hh}:${min}`;
+        }
+        setNowDate();
+
+        const ARTICLE_RULES = {
+            "🎨 Дизайнерские": {
+                "МОНТЕН": { gender: "Муж", colors: ["СИНИЙ"] },
+                "АЛА КИЙИЗ": { gender: "Муж", colors: ["БИРЮЗА ЗЕЛ"] },
+                "ТАЙГАН": { gender: "Жен", colors: ["СВ ЗЕЛЕНЫЙ"] },
+                "ЖЕТИ ОГУЗ": { gender: "Муж", colors: ["КОРИЧНЕВЫЙ"] },
+                "СУПЕР КЫЗ": { gender: "Жен", colors: ["КРАСНЫЙ"] },
+                "НАСКАЛЬНЫЙ КЗ": { gender: "Муж", colors: ["ТЕМ СИНИЙ"] },
+                "ВЕЛКОМ КГ": { gender: "Муж", colors: ["ЗЕЛЕНЫЙ"] },
+                "КЫЙЫН КЫЗ": { gender: "Жен", colors: ["ГРАФИТ"] },
+                "ЖАЙЛОО": { gender: "Муж", colors: ["БЕЖЕВЫЙ"] },
+                "ТУМАР": { gender: "Жен", colors: ["ЖЕЛТЫЙ"] },
+                "ЖААЧЫ": { gender: "Жен", colors: ["ШЕКЕР"] },
+                "МУНУШКОР": { gender: "Муж", colors: ["КОРИЧНЕВЫЙ"] },
+                "БОЗ УЙ": { gender: "Муж", colors: ["ХАКИ"] },
+                "САЙМАЛУУ ТАШ": { gender: "Муж", colors: ["ТЕМ СИНИЙ"] },
+                "ШТАНГИСТ": { gender: "Жен", colors: ["БОРДОВЫЙ"] },
+                "АРТ": { gender: "Муж", colors: ["БЕЛЫЙ"] }
+            },
+            "🧦 Базовые": {
+                "A1301/4": { gender: "Муж", colors: ["Черный", "Белый", "Серый"] },
+                "A3301/4": { gender: "Жен", colors: ["Черный", "Белый", "Серый"] },
+                "A1302/4": { gender: "Муж", colors: ["Черный", "Белый", "Серый"] },
+                "A1205/2": { gender: "Муж", colors: ["Черный", "Белый", "Серый"] },
+                "A3205/2": { gender: "Муж", colors: ["Черный", "Белый", "Серый"] },
+                "В110/2": { gender: "Муж", colors: ["Черный"] },
+                "В111/3": { gender: "Муж", colors: ["Черный"] }
+            }
+        };
+
+        const tableBody = document.getElementById("tableBody");
+        const INITIAL_ROWS = 18; 
+
+        function generateArticleOptions() {
+            let html = '<option value="">-</option>';
+            for (const category in ARTICLE_RULES) {
+                html += `<optgroup label="${category}">`;
+                for (const art in ARTICLE_RULES[category]) {
+                    html += `<option value="${art}">${art}</option>`;
+                }
+                html += `</optgroup>`;
+            }
+            return html;
+        }
+
+        for (let i = 1; i <= INITIAL_ROWS; i++) {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td class="machine-num">
+                    <input type="text" id="m_num_${i}" placeholder="№" inputmode="numeric" onblur="formatMachineNum(${i})" oninput="clearError(this); recalcAll()" style="width: 100%; font-weight: bold; text-align: center;">
+                </td>
+                <td>
+                    <select class="art-select" id="art_${i}" onchange="clearError(this); onArticleChange(${i})">
+                        ${generateArticleOptions()}
+                    </select>
+                </td>
+                <td><input type="text" class="gender-input" id="gender_${i}" readonly style="background:#f0f0f0;"></td>
+                <td>
+                    <select class="color-select" id="color_${i}" onchange="clearError(this)">
+                        <option value="">-</option>
+                    </select>
+                </td>
+                <td><input type="text" id="norm_${i}" inputmode="decimal" pattern="[0-9.,]*" oninput="clearError(this); cleanInput(this); recalcAll()"></td>
+                <td><input type="text" id="r1_${i}" inputmode="decimal" pattern="[0-9.,]*" oninput="clearError(this); cleanInput(this); recalcAll()"></td>
+                <td><input type="number" id="r2_${i}" inputmode="numeric" oninput="clearError(this); recalcAll()"></td>
+                <td><span id="percent_${i}" class="status-badge">-</span></td>
+            `;
+            tableBody.appendChild(tr);
+        }
+
+        function clearError(el) { el.classList.remove('input-error'); }
+
+        function cleanInput(el) {
+            let val = el.value.replace(',', '.');
+            val = val.replace(/[^0-9.]/g, '');
+            const parts = val.split('.');
+            if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
+            el.value = val;
+        }
+
+        function parsePacksToPairs(val) {
+            if (!val) return 0;
+            const strVal = String(val).replace(',', '.').trim();
+            if (strVal.includes('.')) {
+                const parts = strVal.split('.');
+                const packs = parseInt(parts[0], 10) || 0;
+                const pairs = parseInt(parts[1], 10) || 0;
+                return (packs * 12) + pairs;
+            } else {
+                return (parseFloat(strVal) || 0) * 12;
+            }
+        }
+
+        function addPacks(packStr1, packStr2) {
+            const pairs1 = parsePacksToPairs(packStr1);
+            const pairs2 = parsePacksToPairs(packStr2);
+            const totalPairs = pairs1 + pairs2;
+            if (totalPairs === 0) return "0";
+            const packs = Math.floor(totalPairs / 12);
+            const remPairs = totalPairs % 12;
+            return remPairs > 0 ? `${packs}.${remPairs}` : `${packs}`;
+        }
+
+        function formatMachineNum(rowIndex) {
+            const input = document.getElementById(`m_num_${rowIndex}`);
+            let val = input.value.trim();
+            if (val) {
+                val = val.replace(/[^0-9]/g, ''); 
+                if (val) input.value = `№${val}`;
+            }
+        }
+
+        function onArticleChange(mNum) {
+            const artVal = document.getElementById(`art_${mNum}`).value;
+            const genderInput = document.getElementById(`gender_${mNum}`);
+            const colorSelect = document.getElementById(`color_${mNum}`);
+
+            colorSelect.innerHTML = '<option value="">-</option>';
+
+            let foundRule = null;
+            for (const cat in ARTICLE_RULES) {
+                if (ARTICLE_RULES[cat][artVal]) {
+                    foundRule = ARTICLE_RULES[cat][artVal];
+                    break;
+                }
+            }
+
+            if (artVal && foundRule) {
+                genderInput.value = foundRule.gender;
+                foundRule.colors.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c;
+                    opt.textContent = c;
+                    colorSelect.appendChild(opt);
+                });
+                if (foundRule.colors.length === 1) colorSelect.value = foundRule.colors[0];
+            } else {
+                genderInput.value = "";
+            }
+            recalcAll();
+        }
+
+        function recalcAll() {
+            let totalNormStr = "0", totalR1Str = "0", totalR2 = 0;
+            let totalNormPairs = 0, totalR1Pairs = 0;
+            const uniqueMachines = new Set();
+
+            for (let i = 1; i <= INITIAL_ROWS; i++) {
+                const mNum = document.getElementById(`m_num_${i}`).value.trim();
+                const normVal = document.getElementById(`norm_${i}`).value;
+                const r1Val = document.getElementById(`r1_${i}`).value;
+                const r2 = parseFloat(document.getElementById(`r2_${i}`).value) || 0;
+
+                const normPairs = parsePacksToPairs(normVal);
+                const r1Pairs = parsePacksToPairs(r1Val);
+
+                if (mNum) uniqueMachines.add(mNum);
+
+                totalNormStr = addPacks(totalNormStr, normVal);
+                totalR1Str = addPacks(totalR1Str, r1Val);
+
+                totalNormPairs += normPairs;
+                totalR1Pairs += r1Pairs;
+                totalR2 += r2;
+
+                const badge = document.getElementById(`percent_${i}`);
+                if (normPairs > 0 && (r1Pairs > 0 || r1Val !== "")) {
+                    const p = Math.round((r1Pairs / normPairs) * 100);
+                    badge.textContent = `${p}%`;
+                    badge.className = "status-badge " + (p >= 90 ? "green" : (p >= 80 ? "yellow" : "red"));
+                } else {
+                    badge.textContent = "-";
+                    badge.className = "status-badge";
+                }
+            }
+
+            document.getElementById("totalMachinesText").textContent = `${uniqueMachines.size} автоматов в работе`;
+            document.getElementById("totalNorm").textContent = totalNormStr;
+            document.getElementById("totalR1").textContent = totalR1Str;
+            document.getElementById("totalR2").textContent = totalR2;
+
+            const avgBadge = document.getElementById("avgPercent");
+            const norm1sBadge = document.getElementById("norm1sBadge");
+
+            if (totalNormPairs > 0) {
+                const avgP = ((totalR1Pairs / totalNormPairs) * 100).toFixed(1);
+                avgBadge.textContent = `${avgP}%`;
+                avgBadge.className = "status-badge " + (avgP >= 90 ? "green" : (avgP >= 80 ? "yellow" : "red"));
+                document.getElementById("norm1sVal").textContent = `${avgP}% от нормы`;
+                norm1sBadge.className = "weight-badge " + (avgP >= 90 ? "green" : (avgP >= 80 ? "yellow" : "red"));
+            } else {
+                avgBadge.textContent = "0%";
+                avgBadge.className = "status-badge";
+                document.getElementById("norm1sVal").textContent = "0% от нормы";
+                norm1sBadge.className = "weight-badge red";
+            }
+
+            const w1Kg = parseFloat(document.getElementById("w1").value) || 0;
+            const w2G = parseFloat(document.getElementById("w2").value) || 0;
+            const wasteG = parseFloat(document.getElementById("waste").value) || 0;
+
+            const totalWasteG = w2G + wasteG;
+            const totalWeightG = (w1Kg * 1000) + totalWasteG;
+
+            const wasteBadge = document.getElementById("wasteBadge");
+            if (totalWeightG > 0) {
+                const wastePct = ((totalWasteG / totalWeightG) * 100).toFixed(2);
+                document.getElementById("wasteVal").textContent = `${wastePct}% брак`;
+                wasteBadge.className = "weight-badge " + (parseFloat(wastePct) <= 2.0 ? "green" : "red");
+            } else {
+                document.getElementById("wasteVal").textContent = "0.00% брак";
+                wasteBadge.className = "weight-badge green";
+            }
+        }
+
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3VXSXx_phlbjVdHv3ozmN0drCPLg6n0OcbzlubcRMr6R903zc8kfPEP6HdP6sLe-m/exec";
+
+        function submitData() {
+            document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+
+            const operator = document.getElementById("operatorSelect").value;
+            const shift = document.getElementById("shiftSelect").value;
+            const master = document.getElementById("masterSelect").value;
+            const dateVal = document.getElementById("dateInput").value;
+
+            const w1El = document.getElementById("w1");
+            const w2El = document.getElementById("w2");
+            const wasteEl = document.getElementById("waste");
+            const masterWasteEl = document.getElementById("masterWaste");
+
+            let errors = [];
+
+            if (!operator) { document.getElementById("operatorSelect").classList.add('input-error'); errors.push("Выберите Оператора"); }
+            if (!shift) { document.getElementById("shiftSelect").classList.add('input-error'); errors.push("Выберите Смену"); }
+            if (!master) { document.getElementById("masterSelect").classList.add('input-error'); errors.push("Выберите Мастера"); }
+
+            if (w1El.value.trim() === "") { w1El.classList.add('input-error'); errors.push("Укажите вес 1с (кг)"); }
+            if (w2El.value.trim() === "") { w2El.classList.add('input-error'); errors.push("Укажите вес 2с (г)"); }
+            if (wasteEl.value.trim() === "") { wasteEl.classList.add('input-error'); errors.push("Укажите вес брака (г)"); }
+            if (masterWasteEl.value.trim() === "") { masterWasteEl.classList.add('input-error'); errors.push("Укажите вес мастер-брака (г)"); }
+
+            let machinesData = [];
+            let activeRowsCount = 0;
+
+            for (let i = 1; i <= INITIAL_ROWS; i++) {
+                const mNumEl = document.getElementById(`m_num_${i}`);
+                const artEl = document.getElementById(`art_${i}`);
+                const colorEl = document.getElementById(`color_${i}`);
+                const normEl = document.getElementById(`norm_${i}`);
+                const r1El = document.getElementById(`r1_${i}`);
+                const r2El = document.getElementById(`r2_${i}`);
+
+                const mNum = mNumEl.value.trim();
+                const art = artEl.value;
+                const color = colorEl.value;
+                const norm = normEl.value.trim();
+                const r1 = r1El.value.trim();
+                const r2 = r2El.value.trim();
+
+                const isRowTouched = mNum || art || color || norm || r1 || r2;
+
+                if (isRowTouched) {
+                    activeRowsCount++;
+                    let rowErrors = false;
+
+                    if (!mNum) { mNumEl.classList.add('input-error'); rowErrors = true; }
+                    if (!art) { artEl.classList.add('input-error'); rowErrors = true; }
+                    if (!color) { colorEl.classList.add('input-error'); rowErrors = true; }
+                    if (!norm) { normEl.classList.add('input-error'); rowErrors = true; }
+                    if (!r1) { r1El.classList.add('input-error'); rowErrors = true; }
+                    
+                    if (r2 === "") { r2El.value = "0"; }
+
+                    if (rowErrors) {
+                        errors.push(`Заполните полностью строку №${i}`);
+                    } else {
+                        const normP = parsePacksToPairs(norm);
+                        const r1P = parsePacksToPairs(r1);
+                        const pct = normP > 0 ? Math.round((r1P / normP) * 100) : 0;
+
+                        machinesData.push({
+                            machine: mNum,
+                            article: art,
+                            gender: document.getElementById(`gender_${i}`).value,
+                            color: color,
+                            norm_packs: norm,
+                            norm_pairs: normP,
+                            release_1_packs: r1,
+                            release_1_pairs: r1P,
+                            release_2_pcs: parseInt(r2El.value, 10) || 0,
+                            percent: pct
+                        });
+                    }
+                }
+            }
+
+            if (activeRowsCount === 0) {
+                errors.push("Заполните хотя бы один автомат!");
+            }
+
+            if (errors.length > 0) {
+                alert("⚠️ Ошибки при заполнении:\n\n• " + errors.join("\n• "));
+                return;
+            }
+
+            if (!confirm("Вы уверены, что хотите сдать смену в Google Таблицу?")) return;
+
+            const btn = document.querySelector(".btn-submit");
+            btn.disabled = true;
+            btn.textContent = "⏳ Отправка данных...";
+
+            const payloadData = {
+                date: dateVal,
+                operator: operator,
+                shift: shift,
+                master: master,
+                machines: machinesData,
+                weight: {
+                    w1: w1El.value,
+                    w2: w2El.value,
+                    waste: wasteEl.value,
+                    masterWaste: masterWasteEl.value
+                }
+            };
+
+            const payload = new Blob([JSON.stringify(payloadData)], { type: 'text/plain;charset=utf-8' });
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
+                body: payload
+            })
+            .then(() => {
+                alert("✅ Смена успешно записана в Google Таблицу!");
+                btn.disabled = false;
+                btn.textContent = "🚀 Сдать смену в Google Sheets";
+            })
+            .catch(error => {
+                console.error("Ошибка:", error);
+                alert("❌ Ошибка при отправке данных!");
+                btn.disabled = false;
+                btn.textContent = "🚀 Сдать смену в Google Sheets";
+            });
+        }
+    </script>
+</body>
+</html>
