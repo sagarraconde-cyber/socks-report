@@ -217,8 +217,8 @@
     <button class="btn-submit" onclick="submitData()">🚀 Сдать смену в Google Sheets</button>
 
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+        const tg = window.Telegram ? window.Telegram.WebApp : null;
+        if (tg) tg.expand();
 
         function setNowDate() {
             const now = new Date();
@@ -446,6 +446,76 @@
             }
         }
 
+        // --- ЛОГИКА АВТОСОХРАНЕНИЯ (ЧЕРНОВИК) ---
+        function saveDraft() {
+            const draftData = {
+                operator: document.getElementById("operatorSelect").value,
+                shift: document.getElementById("shiftSelect").value,
+                master: document.getElementById("masterSelect").value,
+                w1: document.getElementById("w1").value,
+                w2: document.getElementById("w2").value,
+                waste: document.getElementById("waste").value,
+                masterWaste: document.getElementById("masterWaste").value,
+                machines: []
+            };
+
+            for (let i = 1; i <= INITIAL_ROWS; i++) {
+                draftData.machines.push({
+                    mNum: document.getElementById(`m_num_${i}`).value,
+                    art: document.getElementById(`art_${i}`).value,
+                    gender: document.getElementById(`gender_${i}`).value,
+                    color: document.getElementById(`color_${i}`).value,
+                    norm: document.getElementById(`norm_${i}`).value,
+                    r1: document.getElementById(`r1_${i}`).value,
+                    r2: document.getElementById(`r2_${i}`).value
+                });
+            }
+
+            localStorage.setItem("shift_report_draft", JSON.stringify(draftData));
+        }
+
+        function loadDraft() {
+            const saved = localStorage.getItem("shift_report_draft");
+            if (!saved) return;
+
+            try {
+                const draftData = JSON.parse(saved);
+                if (draftData.operator) document.getElementById("operatorSelect").value = draftData.operator;
+                if (draftData.shift) document.getElementById("shiftSelect").value = draftData.shift;
+                if (draftData.master) document.getElementById("masterSelect").value = draftData.master;
+                if (draftData.w1) document.getElementById("w1").value = draftData.w1;
+                if (draftData.w2) document.getElementById("w2").value = draftData.w2;
+                if (draftData.waste) document.getElementById("waste").value = draftData.waste;
+                if (draftData.masterWaste) document.getElementById("masterWaste").value = draftData.masterWaste;
+
+                if (draftData.machines) {
+                    draftData.machines.forEach((m, idx) => {
+                        const i = idx + 1;
+                        if (i <= INITIAL_ROWS) {
+                            if (m.mNum) document.getElementById(`m_num_${i}`).value = m.mNum;
+                            if (m.art) {
+                                document.getElementById(`art_${i}`).value = m.art;
+                                onArticleChange(i);
+                            }
+                            if (m.color) document.getElementById(`color_${i}`).value = m.color;
+                            if (m.norm) document.getElementById(`norm_${i}`).value = m.norm;
+                            if (m.r1) document.getElementById(`r1_${i}`).value = m.r1;
+                            if (m.r2) document.getElementById(`r2_${i}`).value = m.r2;
+                        }
+                    });
+                }
+                recalcAll();
+            } catch (e) {
+                console.error("Ошибка загрузки черновика", e);
+            }
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            loadDraft();
+            document.body.addEventListener("input", saveDraft);
+            document.body.addEventListener("change", saveDraft);
+        });
+
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3VXSXx_phlbjVdHv3ozmN0drCPLg6n0OcbzlubcRMr6R903zc8kfPEP6HdP6sLe-m/exec";
 
         function submitData() {
@@ -565,8 +635,10 @@
             })
             .then(() => {
                 alert("✅ Смена успешно записана в Google Таблицу!");
+                localStorage.removeItem("shift_report_draft"); // Очищаем черновик после отправки
                 btn.disabled = false;
                 btn.textContent = "🚀 Сдать смену в Google Sheets";
+                location.reload(); // Перезагружаем форму чистой
             })
             .catch(error => {
                 console.error("Ошибка:", error);
